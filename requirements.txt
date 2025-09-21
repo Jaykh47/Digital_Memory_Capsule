@@ -1,0 +1,8 @@
+Flask
+Pillow
+nltk
+werkzeug
+Flask-Cors
+gunicorn
+cloudinary
+requests

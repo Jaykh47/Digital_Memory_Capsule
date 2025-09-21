@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Memory Time Capsule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .file-drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+
+        .file-drop-zone.drag-over {
+            background-color: #e0f2fe;
+            border-color: #38bdf8;
+        }
+
+        .image-preview-item {
+            position: relative;
+        }
+
+        .remove-image-btn {
+            position: absolute;
+            top: -0.5rem;
+            right: -0.5rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 9999px;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .image-preview-item:hover .remove-image-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+
+        <!-- Main Upload Form -->
+        <div id="upload-section" class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg space-y-6">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-slate-900">Create Your Time Capsule</h1>
+                <p class="text-slate-500 mt-2">Lock away a memory. Our AI will craft a special message for your future
+                    self.</p>
+            </div>
+
+            <!-- Text Input -->
+            <div>
+                <label for="memory-text" class="block text-sm font-medium text-slate-700 mb-1">Your Memory or
+                    Story</label>
+                <textarea id="memory-text" rows="5"
+                    class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                    placeholder="Write about a special moment, a feeling, or a dream..."></textarea>
+            </div>
+
+            <!-- Photo Upload -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Add Photos</label>
+                <div id="file-drop-zone"
+                    class="file-drop-zone w-full p-6 rounded-lg text-center cursor-pointer bg-slate-50 hover:bg-slate-100">
+                    <input type="file" id="photo-upload" multiple accept="image/*" class="hidden">
+                    <div class="text-slate-500">
+                        <svg class="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48"
+                            aria-hidden="true">
+                            <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                        <p class="mt-2">Drag & drop photos here, or <span class="font-semibold text-sky-600">click to
+                                browse</span></p>
+                        <p class="text-xs text-slate-400 mt-1">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                </div>
+                <div id="image-preview-container" class="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                </div>
+            </div>
+
+            <!-- Unlock Date -->
+            <div>
+                <label for="unlock-date" class="block text-sm font-medium text-slate-700 mb-1">Unlock On</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="date" id="unlock-date"
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                    <input type="time" id="unlock-time"
+                        class="w-full sm:w-auto p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <p id="date-error" class="text-red-500 text-sm mt-1 hidden">Please select a future date and time.</p>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="create-memory-btn"
+                class="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-300 transition-all transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:scale-100">
+                Lock Your Memory
+            </button>
+        </div>
+
+        <!-- Processing State -->
+        <div id="processing-section" class="hidden bg-white p-8 rounded-2xl shadow-lg text-center space-y-4">
+            <div role="status">
+                <svg aria-hidden="true"
+                    class="inline w-12 h-12 text-gray-200 animate-spin dark:text-gray-600 fill-sky-600"
+                    viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                        fill="currentColor" />
+                    <path
+                        d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                        fill="currentFill" />
+                </svg>
+                <span class="sr-only">Loading...</span>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900">Crafting Your Memory</h2>
+            <p class="text-slate-500">Our AI is analyzing the emotion and generating a unique experience. This may take
+                a moment...</p>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="hidden bg-white p-8 rounded-2xl shadow-lg text-center space-y-6">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-green-600" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-slate-900">Your Time Capsule is Sealed!</h2>
+            <p class="text-slate-500">Save your unique QR code or link. This is the only way to access your memory in
+                the future.</p>
+
+            <div class="flex justify-center">
+                <canvas id="qr-code-canvas"></canvas>
+            </div>
+
+            <div class="relative">
+                <input id="memory-link" type="text" readonly
+                    class="w-full bg-slate-100 p-3 pr-24 rounded-lg border border-slate-300 text-slate-600 text-sm">
+                <button id="copy-link-btn"
+                    class="absolute right-1 top-1/2 -translate-y-1/2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-md text-sm transition">Copy</button>
+            </div>
+
+            <button id="create-another-btn"
+                class="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-300 transition">Create
+                Another Memory</button>
+        </div>
+    </div>
+
+    <script>
+        const uploadSection = document.getElementById('upload-section');
+        const processingSection = document.getElementById('processing-section');
+        const resultSection = document.getElementById('result-section');
+
+        const fileDropZone = document.getElementById('file-drop-zone');
+        const photoUpload = document.getElementById('photo-upload');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+
+        const createMemoryBtn = document.getElementById('create-memory-btn');
+        const createAnotherBtn = document.getElementById('create-another-btn');
+        const copyLinkBtn = document.getElementById('copy-link-btn');
+
+        const memoryLinkInput = document.getElementById('memory-link');
+        const qrCanvas = document.getElementById('qr-code-canvas');
+
+        const dateInput = document.getElementById('unlock-date');
+        const timeInput = document.getElementById('unlock-time');
+        const dateError = document.getElementById('date-error');
+
+        let uploadedFiles = [];
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+
+        // --- Drag and Drop Logic ---
+        fileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropZone.classList.add('drag-over');
+        });
+
+        fileDropZone.addEventListener('dragleave', () => {
+            fileDropZone.classList.remove('drag-over');
+        });
+
+        fileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileDropZone.addEventListener('click', () => photoUpload.click());
+        photoUpload.addEventListener('change', () => handleFiles(photoUpload.files));
+
+        function handleFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    uploadedFiles.push(file);
+                }
+            }
+            renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            imagePreviewContainer.innerHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'image-preview-item w-24 h-24';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="w-full h-full object-cover rounded-lg shadow-md">
+                        <div class="remove-image-btn" data-index="${index}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </div>
+                    `;
+                    imagePreviewContainer.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        imagePreviewContainer.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-image-btn');
+            if (removeBtn) {
+                const indexToRemove = parseInt(removeBtn.dataset.index, 10);
+                uploadedFiles.splice(indexToRemove, 1);
+                renderImagePreviews();
+            }
+        });
+
+
+        // --- Form Submission Logic ---
+        createMemoryBtn.addEventListener('click', () => {
+            if (!validateForm()) {
+                return;
+            }
+
+            uploadSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            processingSection.classList.remove('hidden');
+
+            (async () => {
+                const formData = new FormData();
+                formData.append('memoryText', document.getElementById('memory-text').value);
+
+                const unlockDateTime = `${dateInput.value}T${timeInput.value}`;
+                formData.append('unlockDate', unlockDateTime);
+
+                uploadedFiles.forEach(file => {
+                    formData.append('photos', file);
+                });
+
+                try {
+                    // *** UPDATED THIS LINE FOR DEPLOYMENT ***
+                    const response = await fetch('/create-memory', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Server responded with an error.');
+                    }
+
+                    const result = await response.json();
+                    const memoryId = result.memoryId;
+                    
+                    // Use window.location to build the correct URL for local and deployed environments
+                    const memoryUrl = `${window.location.protocol}//${window.location.host}/memory/${memoryId}`;
+
+                    memoryLinkInput.value = memoryUrl;
+                    new QRious({
+                        element: qrCanvas,
+                        value: memoryUrl,
+                        size: 200,
+                        padding: 10,
+                        foreground: '#0f172a',
+                    });
+
+                    processingSection.classList.add('hidden');
+                    resultSection.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Failed to create memory:', error);
+                    alert('Could not create the memory. Please try again.');
+                    processingSection.classList.add('hidden');
+                    uploadSection.classList.remove('hidden');
+                }
+            })();
+        });
+
+        function validateForm() {
+            const dateStr = dateInput.value;
+            const timeStr = timeInput.value;
+
+            if (!dateStr || !timeStr) {
+                dateError.textContent = 'Please select a date and time.';
+                dateError.classList.remove('hidden');
+                return false;
+            }
+
+            const selectedDateTime = new Date(`${dateStr}T${timeStr}`);
+            const now = new Date();
+
+            if (selectedDateTime <= now) {
+                dateError.textContent = 'Please select a future date and time.';
+                dateError.classList.remove('hidden');
+                return false;
+            }
+
+            dateError.classList.add('hidden');
+            return true;
+        }
+
+
+        // --- Result Page Logic ---
+        copyLinkBtn.addEventListener('click', () => {
+            memoryLinkInput.select();
+            try {
+                document.execCommand('copy');
+                copyLinkBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyLinkBtn.textContent = 'Copy';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                copyLinkBtn.textContent = 'Error!';
+            }
+        });
+
+        createAnotherBtn.addEventListener('click', () => {
+            document.getElementById('memory-text').value = '';
+            uploadedFiles = [];
+            renderImagePreviews();
+            dateInput.value = '';
+            timeInput.value = '';
+            photoUpload.value = '';
+
+            resultSection.classList.add('hidden');
+            processingSection.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+
+</html>
+
